@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 from mininet.topo import Topo
 from mininet.net import Mininet
-from mininet.node import OVSBridge, RemoteController
+from mininet.node import OVSKernelSwitch, RemoteController
 from mininet.cli import CLI
 from mininet.link import TCLink
 from comnetsemu.net import Containernet
 from comnetsemu.node import DockerHost
 from mininet.log import setLogLevel
+from functools import partial
 
 SWITCH_NUM = 4
 CLIENT_NUM = 4
@@ -60,9 +61,13 @@ class NetworkSlicingTopo(Topo):
         for i in range(SERVER_NUM):
             self.addHost(
                     f"s{i+1}",
-                    dimage=SERVER_IMG[i],
                     ip=f"10.0.0.{i+CLIENT_NUM+1}",
-                    docker_args={},
+                    dimage=SERVER_IMG[i],
+                    port_bindings={80:80, 443:443},
+                    ports=[80,443],
+                    publish_all_ports=True,
+                    docker_args={
+                        },
                     cls=DockerHost
                 )
             #print(type(self.g.node[f"s{i+CLIENT_NUM+1}"]))
@@ -72,16 +77,16 @@ class NetworkSlicingTopo(Topo):
             
             #print(h1)
 
-        self.addLink("r1", "r2", **link_config_high)
-        self.addLink("r1", "r4", **link_config_low)
-        self.addLink("r4", "r3", **link_config_low)
-        self.addLink("r2", "r3", **link_config_high)
+        self.addLink("r1", "r2", port1=5, port2=1, **link_config_high)
+        self.addLink("r1", "r4", port1=6, port2=1, **link_config_low)
+        self.addLink("r4", "r3", port1=2, port2=5, **link_config_low)
+        self.addLink("r2", "r3", port1=2, port2=6, **link_config_high)
 
         for i in range(CLIENT_NUM):
-            self.addLink(f"h{i+1}", "r1", **host_link_config)
+            self.addLink(f"h{i+1}", "r1", port1=0, port2=i+1, **host_link_config)
 
         for i in range(SERVER_NUM):
-            self.addLink(f"s{i+1}", "r3", **server_link_config)
+            self.addLink(f"s{i+1}", "r3", port1=0, port2=i+1, **server_link_config)
     
     @staticmethod
     def setContainerIP(net):
@@ -92,21 +97,19 @@ class NetworkSlicingTopo(Topo):
 #topos = {"networkSlicingTopo": (lambda: NetworkSlicingTopo())}
 
 if __name__ == '__main__':
-    setLogLevel("debug")
+    #setLogLevel("debug")
     topo = NetworkSlicingTopo()
     net = Containernet(
         topo=topo,
-        switch=OVSBridge,
+        switch=OVSKernelSwitch,
         build=False,
-        controller=RemoteController,
+        #controller=partial(RemoteController, name='c0',ip='127.0.0.1', port=6633),
         autoSetMacs=True,
-        autoStaticArp=True,
+        #autoStaticArp=True,
         link=TCLink
         )
-
+    net.addController('c0',controller=RemoteController,ip='127.0.0.1')
     net.build()
-    print("HERE")
-
     # this line add network ip configuration to the docker host, since the Containernet interface fails to do it
     #topo.setContainerIP(net)
     #import band_limiting
