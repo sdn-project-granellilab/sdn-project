@@ -1,1 +1,0 @@
-[{"datapath_id": 1, "port_src": 3, "eth_src": "00:00:00:00:00:01", "port_dst": 4, "eth_dst": "00:00:00:00:00:02", "packets_count": 0, "packets_bytes": 0}, {"datapath_id": 1, "port_src": 4, "eth_src": "00:00:00:00:00:02", "port_dst": 3, "eth_dst": "00:00:00:00:00:01", "packets_count": 0, "packets_bytes": 0}]

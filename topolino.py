@@ -1,23 +1,16 @@
 #!/usr/bin/python3
 from mininet.topo import Topo
 from mininet.net import Mininet
-from mininet.node import OVSBridge, RemoteController
+from mininet.node import RemoteController, OVSSwitch
 from mininet.cli import CLI
 from mininet.link import TCLink
-from comnetsemu.net import Containernet
-from comnetsemu.node import DockerHost
-from mininet.log import setLogLevel
+# from comnetsemu.net import Containernet
+# from comnetsemu.node import DockerHost
+# from mininet.log import setLogLevel
 
 SWITCH_NUM = 4
 CLIENT_NUM = 4
 SERVER_NUM = 4
-
-SERVER_IMG = [
-        "server_circa:latest",
-        "server_circa:latest",
-        "server_circa:latest",
-        "server_circa:latest"
-        ]
 
 class NetworkSlicingTopo(Topo):
     def __init__(self):
@@ -60,10 +53,7 @@ class NetworkSlicingTopo(Topo):
         for i in range(SERVER_NUM):
             self.addHost(
                     f"s{i+1}",
-                    dimage=SERVER_IMG[i],
                     ip=f"10.0.0.{i+CLIENT_NUM+1}",
-                    docker_args={},
-                    cls=DockerHost
                 )
             #print(type(self.g.node[f"s{i+CLIENT_NUM+1}"]))
                 
@@ -92,21 +82,19 @@ class NetworkSlicingTopo(Topo):
 #topos = {"networkSlicingTopo": (lambda: NetworkSlicingTopo())}
 
 if __name__ == '__main__':
-    setLogLevel("debug")
+    #setLogLevel("debug")
     topo = NetworkSlicingTopo()
-    net = Containernet(
+    net = Mininet(
         topo=topo,
-        switch=OVSBridge,
+        switch=OVSSwitch,
         build=False,
         controller=RemoteController,
         autoSetMacs=True,
         autoStaticArp=True,
         link=TCLink
-        )
+    )
 
     net.build()
-    print("HERE")
-
     # this line add network ip configuration to the docker host, since the Containernet interface fails to do it
     #topo.setContainerIP(net)
     #import band_limiting
