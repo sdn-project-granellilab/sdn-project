@@ -38,7 +38,7 @@ class NetworkSlicingTopo(Topo):
         switch_config    = dict(
                 #inNamespace=True,
                 failMode="standalone",
-                stp=False
+                stp=True
             )
 
         # SWITCH

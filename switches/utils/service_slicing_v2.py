@@ -12,10 +12,12 @@ from ryu.lib.packet import icmp
 from ryu.lib.xflow import netflow
 
 from ryu.lib.ovs.bridge import OVSBridge
-import os, socket
+import os, socket, struct
 
-VFLOW_COLLECTOR_IP   = "127.0.0.1"
-VFLOW_COLLECTOR_PORT = "9996"
+# VFLOW_COLLECTOR_IP   = "127.0.0.1"
+# VFLOW_COLLECTOR_PORT = 9996 #ipfix
+
+# sudo ovs-vsctl -- set Bridge r4 netflow=@nf -- --id=@nf create NetFlow targets=\"127.0.0.1:9996\"
 
 class TrafficSlicing(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -103,14 +105,14 @@ class TrafficSlicing(app_manager.RyuApp):
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
 
-        # msd.data => elementi del pacchetto in formato binario
-        
-        # print(f"Packet: {msg.data}")
-        #vflow = netflow.NetFlowV5Flow.parser(msg.data)
-        #print(vflow)
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.sendto(msg.data, (VFLOW_COLLECTOR_IP, VFLOW_COLLECTOR_PORT))
+        # Create ipfix packet
+        #p = netflow.parse_packet(payload)
+        # netflow = scp.NetflowHeader()/scp.NetflowHeaderV5(count=1)/scp.NetflowRecordV5(dst="192.168.0.1")
+        # pkt_netflow = scp.Ether()/scp.IP()/scp.UDP()/netflow
+        # if netflow.NetFlowV5.parser(msg.data):
+        #     print("Packet netflows")
+        #     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        #     sock.sendto(pkt_netflow.build(), (VFLOW_COLLECTOR_IP, VFLOW_COLLECTOR_PORT))
 
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
