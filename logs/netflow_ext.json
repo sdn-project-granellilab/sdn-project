@@ -1,0 +1,99 @@
+{
+	"AgentID": "172.18.0.1",
+	"Header": {
+		"Version": 5,
+		"Count": 1,
+		"SysUpTimeMSecs": 543597,
+		"UNIXSecs": 1708876334,
+		"UNIXNSecs": 675454719,
+		"SeqNum": 13,
+		"EngType": 80,
+		"EngID": 80,
+		"SmpInt": 0
+	},
+	"Flows": [
+		{
+			"SrcAddr": "10.0.0.5",
+			"DstAddr": "10.0.0.1",
+			"NextHop": "0.0.0.0",
+			"Input": 2,
+			"Output": 1,
+			"PktCount": 165,
+			"L3Octets": 10898,
+			"StartTime": 524973,
+			"EndTime": 533535,
+			"SrcPort": 5001,
+			"DstPort": 56124,
+			"Padding1": 0,
+			"TCPFlags": 19,
+			"ProtType": 6,
+			"Tos": 0,
+			"SrcAsNum": 0,
+			"DstAsNum": 0,
+			"SrcMask": 0,
+			"DstMask": 0,
+			"Padding2": 0
+		}
+	]
+}
+
+{
+	"AgentID": "172.18.0.1",
+	"Header": {
+		"Version": 5,
+		"Count": 2,
+		"SysUpTimeMSecs": 1265055,
+		"UNIXSecs": 1708882768,
+		"UNIXNSecs": 3259302,
+		"SeqNum": 13,
+		"EngType": 13,
+		"EngID": 13,
+		"SmpInt": 0
+	},
+	"Flows": [
+		{
+			"SrcAddr": "10.0.0.1",
+			"DstAddr": "10.0.0.6",
+			"NextHop": "0.0.0.0",
+			"Input": 1,
+			"Output": 2,
+			"PktCount": 587,
+			"L3Octets": 57526,
+			"StartTime": 664172,
+			"EndTime": 1264256,
+			"SrcPort": 0,
+			"DstPort": 2048,
+			"Padding1": 0,
+			"TCPFlags": 0,
+			"ProtType": 1,
+			"Tos": 0,
+			"SrcAsNum": 0,
+			"DstAsNum": 0,
+			"SrcMask": 0,
+			"DstMask": 0,
+			"Padding2": 0
+		},
+		{
+			"SrcAddr": "10.0.0.6",
+			"DstAddr": "10.0.0.1",
+			"NextHop": "0.0.0.0",
+			"Input": 2,
+			"Output": 1,
+			"PktCount": 587,
+			"L3Octets": 57526,
+			"StartTime": 664172,
+			"EndTime": 1264256,
+			"SrcPort": 0,
+			"DstPort": 0,
+			"Padding1": 0,
+			"TCPFlags": 0,
+			"ProtType": 1,
+			"Tos": 0,
+			"SrcAsNum": 0,
+			"DstAsNum": 0,
+			"SrcMask": 0,
+			"DstMask": 0,
+			"Padding2": 0
+		}
+	]
+}

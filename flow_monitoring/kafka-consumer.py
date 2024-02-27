@@ -1,9 +1,12 @@
 from confluent_kafka import Consumer
 import json
-import sqlite3
-import threading, multiprocessing
+import threading
 import datetime
 import psycopg2
+import time
+
+# This code is create to handle the packet flow translation in a way that could be
+# accessed by the ryu-manager script running.
 
 # type FlowRecord struct {
 # 	SrcAddr   uint32 // Source IP Address
@@ -75,11 +78,20 @@ class NetflowInformationRetriever():
         self.hub = threading.Thread(target=self._consumer_fun_and_elaboration)
         self.consumer = Consumer(self.conf)
 
-        self.conn = sqlite3.connect("flaws_kafka.db")
+        self.conn = psycopg2.connect(
+            database = "Netflow",
+            host = "127.0.0.1",
+            user = "postgres",
+            password = "example",
+            port = "5432"
+        )
         self.cur = self.conn.cursor()
         self.suicide = True
 
-        self.cur.execute("CREATE TABLE IF NOT EXISTS flows(src_addr, dst_addr, start_time, end_time, pkt_count, l3octets, tos);")
+        self.cur.execute("""
+            CREATE TABLE IF NOT EXISTS flows(src_addr VARCHAR(20), dst_addr VARCHAR(20), time_delta INT, pkt_count INT, octets INT, tos INT);
+                """)
+        self.conn.commit()
 
         self.hub.start()
 
@@ -88,15 +100,16 @@ class NetflowInformationRetriever():
             Sync. Call to read database and return JSON-like data.
         """
         res = dict()
-        query4 = self.cur.execute("SELECT * FROM flows;")
+        self.cur.execute("SELECT * FROM flows;")
 
-        for i in query4.fetchall():
+        if self.cur.fetchone() is None:
+            return {"message": "no data exists on database."}
+        for i in self.cur.fetchall():
             
-            (src_addr, dst_addr, start_time, end_time, pkt_count, l3octets, tos) = i
+            (src_addr, dst_addr, interval, pkt_count, l3octets, tos) = i
             dict1 = dict()
             dict1[src_addr] = {
-                "end_time": end_time,
-                "start_time": start_time,
+                "interval": interval,
                 "pkt_count": pkt_count,
                 "l3octet": l3octets,
                 "tos": tos
@@ -110,6 +123,7 @@ class NetflowInformationRetriever():
         self.consumer.subscribe(['vflow.netflow5'])
         while self.suicide:
             msg = self.consumer.poll(1.0)
+            #print("This this is gettingexecuted")
 
             if msg is None:
                 continue
@@ -126,26 +140,28 @@ class NetflowInformationRetriever():
                 i_src = i["SrcAddr"]
                 i_dst = i["DstAddr"]
                 i_tos = i["Tos"]
-                query1 = self.cur.execute(f"SELECT * from flows where src_addr='{i_src}' and dst_addr='{i_dst}' and tos='{i_tos}';")
-                if query1.fetchone() is None:
+                self.cur.execute(f"SELECT * from flows where src_addr=%s and dst_addr=%s and tos=%s;", 
+                                          (i_src, i_dst, i_tos))
+                query1 = self.cur.fetchone()
+                if query1 is None: 
                     src_addr, dst_addr, start_time, end_time, pkt_count, l3octets, tos = \
                         i["SrcAddr"], i["DstAddr"], i["StartTime"], i["EndTime"], i["PktCount"], i["L3Octets"], i["Tos"]
-                    query2 = self.cur.execute(f"INSERT INTO flows VALUES (?, ?, ?, ?, ?, ?, ?);", (src_addr, dst_addr, start_time, end_time, pkt_count, l3octets, tos))
+                    insert_query = "INSERT INTO flows (src_addr, dst_addr, time_delta, pkt_count, octets, tos) VALUES (%s, %s, %s, %s, %s, %s);"
+                    values = (src_addr, dst_addr, end_time-start_time, pkt_count, l3octets, tos)
+                    print(end_time-start_time)
+                    self.cur.execute(insert_query, values)
 
                 else:
-                    (i1, i2, start_time, end_time, pkt_count, i6, i7) = query1[0]
-                    n_start_time = start_time
-                    n_end_time = end_time
-                    if start_time > i["StartTime"]:
-                        n_start_time = i["StartTime"]
-                    if end_time < i["EndTime"]:
-                        n_end_time = i["EndTime"]
+                    #print(i)
+                    (i1, i2, interval, pkt_count, octet, i6) = query1
+                    n_interval = 0
+                    n_interval += interval
                     pkt_count += i["PktCount"]
-                    l3oct_new = query1[0][6] + i["L30Octets"]
-                    query3 = self.cur.execute("UPDATE flows SET pkt_count=?, l30octets=?, start_time=?, end_time=? where where src_addr=? and dst_addr=? and tos=?;", 
-                                              (pkt_count, l3oct_new, n_start_time, n_end_time))
+                    l3oct_new = octet + i["L3Octets"]
+                    self.cur.execute("UPDATE flows SET pkt_count=%s, octets=%s, time_delta=%s WHERE src_addr=%s and dst_addr=%s and tos=%s;", 
+                                              (pkt_count, l3oct_new, n_interval, i_src, i_dst, i_tos))
 
-                self.con.commit()
+                self.conn.commit()
 
     def bandwith_usage_per_link(self):
         res = dict()
@@ -163,18 +179,12 @@ class NetflowInformationRetriever():
             res[dst_addr] = dict1
             
         return res
+    
     def close(self):
         """
             Close connection.
         """
         self.suicide = False
-
-    def empty_trash(self):
-        """
-            Empty the database.
-        """
-        # self.cur.execute("DROP DATABASE flaws_kafka.db IF EXISTS;")
-        # self.cur.execute("CREATE TABLE IF NOT EXISTS flows(src_addr, dst_addr, input, output, pkt_count, l3octets, tos);")
         
     def __del__(self):
         print("Closing..")
@@ -183,7 +193,7 @@ class NetflowInformationRetriever():
 
 if __name__ == "__main__":
     netflow = NetflowInformationRetriever()
-    netflow.empty_trash()
     for i in range(10):
         print(i, " " ,netflow.get_flow_information())
+        time.sleep(10)
     netflow.close()

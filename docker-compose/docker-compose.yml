@@ -1,0 +1,419 @@
+version: "3.8"
+
+volumes:
+  grafana_data:
+  certs:
+  vflow_logs:
+  # influxdb2:
+  # telegraf:
+  # opensearch-data1:
+  # opensearch-data2:
+  # es-certs:
+  #   driver: local
+  # esdata01:
+  #   driver: local
+  # kibanadata:
+  #   driver: local
+  metricbeatdata01:
+    driver: local
+  filebeatdata01:
+    driver: local
+  logstashdata01:
+    driver: local
+
+# networks:
+#   opensearch-net:
+
+services:
+  kafka:
+    image: lensesio/fast-data-dev
+    hostname: kafka
+    ports:
+      - "2181:2181"
+      - "9092:9092"
+      - "3030:3030"
+    restart: on-failure
+
+  vflow:
+    image: mehrdadrad/vflow
+    hostname: vflow
+    entrypoint: /bin/sh -c "sleep 25 && vflow"
+    depends_on:
+      - kafka
+    environment:
+      - VFLOW_KAFKA_BROKERS=kafka:9092
+    volumes:
+      - ./scripts:/etc/vflow
+      - vflow_logs:/var/log
+    ports:
+      - "4739:4739/udp"
+      - "4729:4729/udp"
+      - "6343:6343/udp"
+      - "9996:9996/udp"
+      - "8081:8081"
+    restart: on-failure
+
+  prometheus:
+    image: prom/prometheus:latest
+    hostname: prom
+    ports:
+      - "9090:9090"
+    container_name: prometheus
+    volumes:
+      - ./scripts:/etc/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+
+  grafana:
+    image: grafana/grafana
+    hostname: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - "GF_INSTALL_PLUGINS=hamedkarbasi93-kafka-datasource,grafana-simple-json-datasource"
+    restart: on-failure
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - certs:/certs
+  
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8080:8080
+    environment:
+      DYNAMIC_CONFIG_ENABLED: 'true'
+
+  db:
+    image: postgres
+    restart: always
+    hostname: postgres
+    # set shared memory limit when using docker-compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    ports:
+      - "5432:5432"
+    volumes:
+     - type: tmpfs
+       target: /dev/shm
+       tmpfs:
+         size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: example
+
+  adminer-postgres:
+    image: adminer
+    hostname: adminer
+    restart: always
+    ports:
+      - 8085:8080
+
+
+  # ELK STACK
+  # setup:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+  #   volumes:
+  #     - es-certs:/usr/share/elasticsearch/config/certs
+  #   user: "0"
+  #   command: >
+  #     bash -c '
+  #       if [ x${ELASTIC_PASSWORD} == x ]; then
+  #         echo "Set the ELASTIC_PASSWORD environment variable in the .env file";
+  #         exit 1;
+  #       elif [ x${KIBANA_PASSWORD} == x ]; then
+  #         echo "Set the KIBANA_PASSWORD environment variable in the .env file";
+  #         exit 1;
+  #       fi;
+  #       if [ ! -f config/certs/ca.zip ]; then
+  #         echo "Creating CA";
+  #         bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+  #         unzip config/certs/ca.zip -d config/certs;
+  #       fi;
+  #       if [ ! -f config/certs/certs.zip ]; then
+  #         echo "Creating certs";
+  #         echo -ne \
+  #         "instances:\n"\
+  #         "  - name: es01\n"\
+  #         "    dns:\n"\
+  #         "      - es01\n"\
+  #         "      - localhost\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         "  - name: kibana\n"\
+  #         "    dns:\n"\
+  #         "      - kibana\n"\
+  #         "      - localhost\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         > config/certs/instances.yml;
+  #         bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+  #         unzip config/certs/certs.zip -d config/certs;
+  #       fi;
+  #       echo "Setting file permissions"
+  #       chown -R root:root config/certs;
+  #       find . -type d -exec chmod 750 \{\} \;;
+  #       find . -type f -exec chmod 640 \{\} \;;
+  #       echo "Waiting for Elasticsearch availability";
+  #       until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+  #       echo "Setting kibana_system password";
+  #       until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" https://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+  #       echo "All done!";
+  #     '
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "[ -f config/certs/es01/es01.crt ]"]
+  #     interval: 1s
+  #     timeout: 5s
+  #     retries: 120
+  
+  # es01:
+  #   depends_on:
+  #     setup:
+  #       condition: service_healthy
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+  #   labels:
+  #     co.elastic.logs/module: elasticsearch
+  #   volumes:
+  #     - es-certs:/usr/share/elasticsearch/config/certs
+  #     - esdata01:/usr/share/elasticsearch/data
+  #   ports:
+  #     - ${ES_PORT}:9200
+  #   environment:
+  #     - node.name=es01
+  #     - cluster.name=${CLUSTER_NAME}
+  #     - discovery.type=single-node
+  #     - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+  #     - bootstrap.memory_lock=true
+  #     - xpack.security.enabled=true
+  #     - xpack.security.http.ssl.enabled=true
+  #     - xpack.security.http.ssl.key=certs/es01/es01.key
+  #     - xpack.security.http.ssl.certificate=certs/es01/es01.crt
+  #     - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+  #     - xpack.security.transport.ssl.enabled=true
+  #     - xpack.security.transport.ssl.key=certs/es01/es01.key
+  #     - xpack.security.transport.ssl.certificate=certs/es01/es01.crt
+  #     - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+  #     - xpack.security.transport.ssl.verification_mode=certificate
+  #     - xpack.license.self_generated.type=${LICENSE}
+  #   mem_limit: ${ES_MEM_LIMIT}
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   healthcheck:
+  #     test:
+  #       [
+  #        "CMD-SHELL",
+  #        "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+  #       ]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 120
+  
+  # kibana:
+  #   depends_on:
+  #     es01:
+  #       condition: service_healthy
+  #   image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+  #   labels:
+  #     co.elastic.logs/module: kibana
+  #   volumes:
+  #     - es-certs:/usr/share/kibana/config/certs
+  #     - kibanadata:/usr/share/kibana/data
+  #   ports:
+  #     - ${KIBANA_PORT}:5601
+  #   environment:
+  #     - SERVERNAME=kibana
+  #     - ELASTICSEARCH_HOSTS=https://es01:9200
+  #     - ELASTICSEARCH_USERNAME=kibana_system
+  #     - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+  #     - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+  #     - XPACK_SECURITY_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+  #     - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+  #     - XPACK_REPORTING_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+  #   mem_limit: ${KB_MEM_LIMIT}
+  #   healthcheck:
+  #     test:
+  #      [
+  #        "CMD-SHELL",
+  #        "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+  #      ]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 120
+  
+  # logstash01:
+  #   depends_on:
+  #     es01:
+  #       condition: service_healthy
+  #     kibana:
+  #       condition: service_healthy
+  #   image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+  #   labels:
+  #     co.elastic.logs/module: logstash
+  #   user: root
+  #   volumes:
+  #     - es-certs:/usr/share/logstash/certs
+  #     - logstashdata01:/usr/share/logstash/data
+  #     # - "./logstash_ingest_data/:/usr/share/logstash/ingest_data/"
+  #     - "./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro"
+  #   environment:
+  #     - xpack.monitoring.enabled=false
+  #     - ELASTIC_USER=elastic
+  #     - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+  #     - ELASTIC_HOSTS=https://es01:9200
+
+
+
+
+
+
+
+#   opensearch-node1: # This is also the hostname of the container within the Docker network (i.e. https://opensearch-node1/)
+#     image: opensearchproject/opensearch:latest # Specifying the latest available image - modify if you want a specific version
+#     container_name: opensearch-node1
+#     environment:
+#       - cluster.name=opensearch-cluster # Name the cluster
+#       - node.name=opensearch-node1 # Name the node that will run in this container
+#       - discovery.seed_hosts=opensearch-node1,opensearch-node2 # Nodes to look for when discovering the cluster
+#       - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2 # Nodes eligible to serve as cluster manager
+#       - bootstrap.memory_lock=true # Disable JVM heap memory swapping
+#       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # Set min and max JVM heap sizes to at least 50% of system RAM
+#       - OPENSEARCH_INITIAL_ADMIN_PASSWORD=passwordOpen1234?
+#       - "DISABLE_INSTALL_DEMO_CONFIG=true" # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
+#       - "DISABLE_SECURITY_PLUGIN=true"
+#     ulimits:
+#       memlock:
+#         soft: -1 # Set memlock to unlimited (no soft or hard limit)
+#         hard: -1
+#       nofile:
+#         soft: 65536 # Maximum number of open files for the opensearch user - set to at least 65536
+#         hard: 65536
+#     volumes:
+#       - opensearch-data1:/usr/share/opensearch/data # Creates volume called opensearch-data1 and mounts it to the container
+#     ports:
+#       - 9200:9200 # REST API
+#       - 9600:9600 # Performance Analyzer
+#     # networks:
+#     #   - opensearch-net # All of the containers will join the same Docker bridge network
+#   opensearch-node2:
+#     image: opensearchproject/opensearch:latest # This should be the same image used for opensearch-node1 to avoid issues
+#     container_name: opensearch-node2
+#     environment:
+#       - cluster.name=opensearch-cluster
+#       - node.name=opensearch-node2
+#       - discovery.seed_hosts=opensearch-node1,opensearch-node2
+#       - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2
+#       - bootstrap.memory_lock=true
+#       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+#       #- OPENSEARCH_INITIAL_ADMIN_PASSWORD=passwordOpen1234?
+#       - "DISABLE_INSTALL_DEMO_CONFIG=true" # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
+#       - "DISABLE_SECURITY_PLUGIN=true" # Disables Security plugin
+#     ulimits:
+#       memlock:
+#         soft: -1
+#         hard: -1
+#       nofile:
+#         soft: 65536
+#         hard: 65536
+#     volumes:
+#       - opensearch-data2:/usr/share/opensearch/data
+#     # networks:
+#     #   - opensearch-net
+#   opensearch-dashboards:
+#     image: opensearchproject/opensearch-dashboards:latest # Make sure the version of opensearch-dashboards matches the version of opensearch installed on other nodes
+#     container_name: opensearch-dashboards
+#     ports:
+#       - 5601:5601 # Map host port 5601 to container port 5601
+#     expose:
+#       - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
+#     environment:
+#       OPENSEARCH_HOSTS: '["https://opensearch-node1:9200","https://opensearch-node2:9200"]' # Define the OpenSearch nodes that OpenSearch Dashboards will query
+#     # networks:
+#     #   - opensearch-net
+#   dataprepprer:
+#     image: opensearchproject/data-prepper:latest
+#     volumes:
+#       - ./pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml
+#       - opensearch-data1:/usr/share/opensearch/data/config
+    
+
+#   # filebeat01:
+#   #  depends_on:
+#   #    es01:
+#   #      condition: service_healthy
+#   #  image: docker.elastic.co/beats/filebeat:${STACK_VERSION}
+#   #  user: root
+#   #  volumes:
+#   #    - es-certs:/usr/share/filebeat/certs
+#   #    - filebeatdata01:/usr/share/filebeat/data
+#   #    - "./filebeat_ingest_data/:/usr/share/filebeat/ingest_data/"
+#   #    - "./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro"
+#   #    - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
+#   #    - "/var/run/docker.sock:/var/run/docker.sock:ro"
+#   #  environment:
+#   #    - ELASTIC_USER=elastic
+#   #    - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+#   #    - ELASTIC_HOSTS=https://es01:9200
+#   #    - KIBANA_HOSTS=http://kibana:5601
+#   #    - LOGSTASH_HOSTS=http://logstash01:9600
+  
+#   # logstash01:
+#   #  image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+#   #  labels:
+#   #    co.elastic.logs/module: logstash
+#   #  user: root
+#   #  volumes:
+#   #   #  - es-certs:/usr/share/logstash/certs
+#   #   #  - logstashdata01:/usr/share/logstash/data
+#   #   #  - "./logstash_ingest_data/:/usr/share/logstash/ingest_data/"
+#   #    - "./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro"
+#   #  environment:
+#   #    - xpack.monitoring.enabled=false
+#   #    - ELASTIC_USER=elastic
+#   #    - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+#   #    - ELASTIC_HOSTS=http://opensearch-node1:9200
+
+#   # influxdb:
+#   #   container_name: influxdb
+#   #   image: docker.io/influxdb:2.2.0
+#   #   environment:
+#   #     - "INFLUX_TOKEN=hRHZ6Z3ndGD8WwX3b2uQ8VeZYfQe-I76j8RmbUBAOZ54td78-zcP49Cy4fl6ctxPMVB00Kr4IgDf5uf5S2Sl8w=="
+#   #   ports:
+#   #     - 8086:8086
+#   #   volumes:
+#   #     # Mount for influxdb data directory and configuration
+#   #     - influxdb2:/var/lib/influxdb2:rw
+
+#   # telegraf:
+#   #   container_name: telegraf
+#   #   image: telegraf
+#   #   command: ["telegraf", "--debug", "--config", "/etc/telegraf/telegraf.conf"]
+#   #   volumes:
+#   #     - ./scripts/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+#   #     - telegraf:/hostfs:ro
+
+
+#     # volumes:
+#     #   - ./scripts/config.yml:/etc/kafkaui/dynamic_config.yaml
+  
+#   # loki:
+#   #   image: grafana/loki:2.9.4
+#   #   ports:
+#   #     - "3100:3100"
+#   #   command: -config.file=/etc/loki/local-config.yaml
+#   #   networks:
+#   #     - loki
+
+#   # promtail:
+#   #   image: grafana/promtail:2.9.4
+#   #   volumes:
+#   #     - vflow_logs:/data/logs
+#   #     - ./scripts:/etc/vector
+# # environment:
+# #   - HOST_ETC=/hostfs/etc
+# #   - HOST_PROC=/hostfs/proc
+# #   - HOST_SYS=/hostfs/sys
+# #   - HOST_VAR=/hostfs/var
+# #   - HOST_RUN=/hostfs/run
+# #   - HOST_MOUNT_PREFIX=/hostfs
+    

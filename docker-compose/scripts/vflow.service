@@ -1,0 +1,52 @@
+#!/bin/bash
+# description: vFlow enterprise IPFIX, sFlow v5 raw header collector and Kafka/NSQ producer
+
+USER=root
+DAEMON=vflow
+PIDFILE=/var/run/vflow.pid
+
+start() {
+  if [ -f $PIDFILE ] && kill -0 $(cat $PIDFILE); then
+    echo 'vFlow already is running' >&2
+    return 1
+  fi
+  local CMD="$DAEMON &"
+  echo 'Starting vFlow…' >&2
+  su -s /bin/sh -c "$CMD" $USER
+  echo 'vFlow started' >&2
+}
+
+stop() {
+  echo 'Stopping vFlow…' >&2
+  kill -15 $(cat "$PIDFILE") && rm -f "$PIDFILE"
+  echo 'Service stopped' >&2
+}
+
+status() {
+  if [ -f $PIDFILE ] && kill -0 $(cat $PIDFILE); then
+    echo 'vFlow already is running' >&2
+  else
+    echo 'vFlow is not running' >&2
+  fi
+}
+
+case "$1" in 
+    start)
+       start
+       ;;
+    stop)
+       stop
+       ;;
+    status)
+       status
+       ;;
+  restart)
+       stop
+       sleep 2
+       start
+       ;;
+    *)
+       echo "Usage: $0 {start|stop|status|restart}"
+esac
+
+exit 0 
