@@ -9,6 +9,7 @@ from ryu.lib.packet import ether_types
 from ryu.lib.packet import udp
 from ryu.lib.packet import tcp
 from ryu.lib.packet import icmp
+from ryu.lib.packet import ipv4
 
 from ryu.lib.ovs.bridge import OVSBridge
 from utils import vsctlutil
@@ -21,9 +22,13 @@ class TrafficSlicing(app_manager.RyuApp):
         super(TrafficSlicing, self).__init__(*args, **kwargs)
 
         # outport = self.mac_to_port[dpid][mac_address]
+        # self.mac_to_port = {
+        #     1: {"00:00:00:00:00:01": 3, "00:00:00:00:00:02": 4, "00:00:00:00:00:03": 5, "00:00:00:00:00:04": 6},
+        #     3: {"00:00:00:00:00:05": 3, "00:00:00:00:00:06": 4, "00:00:00:00:00:07": 5,"00:00:00:00:00:08": 6},
+        # }
         self.mac_to_port = {
-            1: {"00:00:00:00:00:01": 3, "00:00:00:00:00:02": 4, "00:00:00:00:00:03": 5, "00:00:00:00:00:04": 6},
-            3: {"00:00:00:00:00:05": 3, "00:00:00:00:00:06": 4, "00:00:00:00:00:07": 5,"00:00:00:00:00:08": 6},
+            1: {"10.0.0.1": 3, "10.0.0.2": 4, "10.0.0.3": 5, "10.0.0.4": 6},
+            3: {"10.0.0.5": 3, "10.0.0.6": 4, "10.0.0.7": 5, "10.0.0.8": 6},
         }
         self.slice_TCport = 9999
         self.queue_mapping = dict()
@@ -105,8 +110,12 @@ class TrafficSlicing(app_manager.RyuApp):
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
             return
-        dst = eth.dst
-        src = eth.src
+        # dst = eth.dst
+        # src = eth.src
+
+        ip = pkt.get_protocol(ipv4.ipv4)
+        dst = ip.dst
+        src = ip.src
 
         dpid = datapath.id
 
@@ -114,28 +123,26 @@ class TrafficSlicing(app_manager.RyuApp):
             if dst in self.mac_to_port[dpid]:
                 out_port = self.mac_to_port[dpid][dst]
                 actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
-                match = datapath.ofproto_parser.OFPMatch(eth_dst=dst)
+                match = datapath.ofproto_parser.OFPMatch(ipv4_dst=dst)
                 self.add_flow(datapath, 1, match, actions)
                 self._send_package(msg, datapath, in_port, actions)
 
-            elif (pkt.get_protocol(udp.udp) and pkt.get_protocol(udp.udp).dst_port == self.slice_TCport):
+            else:
                 slice_number = 1
                 out_port = self.slice_ports[dpid][slice_number]
                 match = datapath.ofproto_parser.OFPMatch(
                     in_port=in_port,
-                    eth_dst=dst,
+                    ipv4_dst=dst,
                     eth_type=ether_types.ETH_TYPE_IP,
-                    ip_proto=0x11,  # udp
-                    udp_dst=self.slice_TCport,
                 )
-
-                actions = [datapath.ofproto_parser.OFPActionSetQueue(1),datapath.ofproto_parser.OFPActionOutput(out_port)]
+                actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
                 self.add_flow(datapath, 2, match, actions)
                 self._send_package(msg, datapath, in_port, actions)
 
         elif dpid not in self.end_swtiches:
             out_port = ofproto.OFPP_FLOOD
-            actions = [datapath.ofproto_parser.OFPActionSetQueue(1),datapath.ofproto_parser.OFPActionOutput(out_port)]
+            actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
             match = datapath.ofproto_parser.OFPMatch(in_port=in_port)
             self.add_flow(datapath, 1, match, actions)
             self._send_package(msg, datapath, in_port, actions)
+

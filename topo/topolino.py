@@ -20,25 +20,25 @@ class NetworkSlicingTopo(Topo):
             inNamespace=True
             )
         link_config_high = dict(
-                    bw=10,
+                    # bw=10,
                     #delay="10ms"
                 )
         link_config_low  = dict(
-                    bw=1,
+                    # bw=1,
                     #delay="10ms"
                 )
         host_link_config = dict(
-                    bw=0.5,
+                    # bw=0.5,
                     #delay="15ms"
                 )
         server_link_config = dict(
-                    bw=10,
+                    # bw=10,
                     #delay="10ms"
                 )
         switch_config    = dict(
                 #inNamespace=True,
-                failMode="standalone",
-                stp=True
+                # failMode="standalone",
+                # stp=False
             )
 
         # SWITCH
