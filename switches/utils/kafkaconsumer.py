@@ -31,7 +31,6 @@ import time
 # 	Padding2  uint16 // Unused (zero) bytes
 # }
 
-
 class NetflowInfo:
     def __init__(self, inlog):
         self.obj = []
@@ -44,14 +43,8 @@ class NetflowInfo:
             tmp["StartTime"] = i["StartTime"]
             tmp["PktCount"] = i["PktCount"]
             tmp["EndTime"] = i["EndTime"]
-            tmp["SrcPort"] = i["SrcPort"]
-            tmp["DstPort"] = i["DstPort"]
 
             tmp["ProtType"] = self._getProtocol(i["ProtType"])
-
-            # Opt.
-            tmp["SrcMask"] = i["SrcMask"]
-            tmp["DstMask"] = i["DstMask"]
 
             self.obj.append(tmp)
 
@@ -64,7 +57,7 @@ class NetflowInfo:
             return "None"
     def __str__(self):
         # Assuming you want to print the details of each flow
-        return '\n'.join(f'[NEW] SrcAddr: {flow["SrcAddr"]}, DstAddr: {flow["DstAddr"]}, StartTime: {flow["StartTime"]}, PktCount: {flow["PktCount"]}, EndTime: {flow["EndTime"]}, SrcPort: {flow["SrcPort"]}, DstPort: {flow["DstPort"]}, ProtType: {flow["ProtType"]}, SrcMask: {flow["SrcMask"]}, DstMask: {flow["DstMask"]}' for flow in self.obj)
+        return '\n'.join(f'[NEW] SrcAddr: {flow["SrcAddr"]}, DeltaT: {flow["StartTime"]-flow["EndTime"]}, PktCount: {flow["PktCount"]}, DstAddr: {flow["DstAddr"]},  ProtType: {flow["ProtType"]},' for flow in self.obj)
 
 class NetflowInformationRetriever():
     OCTET = 8
@@ -75,7 +68,6 @@ class NetflowInformationRetriever():
             'auto.offset.reset': 'earliest'
         }
 
-        self.hub = threading.Thread(target=self._consumer_fun_and_elaboration)
         self.consumer = Consumer(self.conf)
 
         self.conn = psycopg2.connect(
@@ -88,12 +80,16 @@ class NetflowInformationRetriever():
         self.cur = self.conn.cursor()
         self.suicide = True
 
+        self.last_element = dict()
+
+        # TODO: create database.
+        # self.cur.execute("CREATE DATABASE IF NOT EXISTS Netflow;")
+
         self.cur.execute("""
             CREATE TABLE IF NOT EXISTS flows(src_addr VARCHAR(20), dst_addr VARCHAR(20), time_delta INT, pkt_count INT, octets INT, tos INT);
                 """)
         self.conn.commit()
 
-        self.hub.start()
 
     def get_flow_information(self):
         """
@@ -143,12 +139,13 @@ class NetflowInformationRetriever():
                 self.cur.execute(f"SELECT * from flows where src_addr=%s and dst_addr=%s and tos=%s;", 
                                           (i_src, i_dst, i_tos))
                 query1 = self.cur.fetchone()
-                if query1 is None: 
+                if query1 is None:
                     src_addr, dst_addr, start_time, end_time, pkt_count, l3octets, tos = \
                         i["SrcAddr"], i["DstAddr"], i["StartTime"], i["EndTime"], i["PktCount"], i["L3Octets"], i["Tos"]
                     insert_query = "INSERT INTO flows (src_addr, dst_addr, time_delta, pkt_count, octets, tos) VALUES (%s, %s, %s, %s, %s, %s);"
-                    values = (src_addr, dst_addr, end_time-start_time, pkt_count, l3octets, tos)
                     print(end_time-start_time)
+                    values = (src_addr, dst_addr, end_time-start_time, pkt_count, l3octets, tos)
+                    print(values)
                     self.cur.execute(insert_query, values)
 
                 else:
@@ -165,19 +162,83 @@ class NetflowInformationRetriever():
 
     def bandwith_usage_per_link(self):
         res = dict()
-        query = self.cur.execute("SELECT * FROM flows;")
+        self.cur.execute("SELECT * FROM flows;")
+        query = self.cur.fetchall()
 
-        for i in query.fetchall():
-            
-            (src_addr, dst_addr, start_time, end_time, pkt_count, l3octets, tos) = i
-            dict1 = dict()
-            dict1[src_addr] = {
-                "bytes": l3octets * self.OCTET,
-                "delta_t": "" ,
-            }
+        # 1. find flows (10.1)/10.5 -> 10.5/10.1
+        # 2. while finding the flows, elaborate on flow bandwith
 
-            res[dst_addr] = dict1
+        #print("This is the query:\n",  query)
+        # 10.1 -> 10.3 tos=0
+        # 10.1 -> 10.3 tos=16
+        
+        for i in query:
             
+            (src_addr, dst_addr, delta_t, pkt_count, l3octets, tos) = i
+
+            if (dst_addr, src_addr) in res:
+                # [IF] l'inverso esiste, allora inserisco quello nuovo
+                # come somma di quelli prima, e poi aggiorno quello inizialmente inserito
+                # Recupero le informazioni che gia' ho
+                curr_obj = res[(dst_addr, src_addr)]
+
+                # Le sommo a quelle che non ho ancora
+                res[(src_addr, dst_addr)] = {   
+                    "bytes": curr_obj["bytes"]+(l3octets*self.OCTET*pkt_count),
+                    "delta_t": curr_obj["delta_t"] + delta_t,
+                    "tos": [curr_obj["tos"][0], tos]
+                }
+
+                # Aggiorno l'oggetto originale in modo che siano uguali
+                res[(dst_addr, src_addr)] = res[(src_addr, dst_addr)].copy()
+            else:
+                # se non esiste inserisco semplicemente il primo valore.
+                res[(src_addr, dst_addr)] = {
+                    "bytes": l3octets * self.OCTET * pkt_count,
+                    "delta_t":  delta_t,
+                    "tos": [tos],
+                }
+        
+        # this for loop ensure that every flow is a couple.
+        for i in query:
+            (src_addr, dst_addr, delta_t, pkt_count, l3octets, tos) = i
+            if res[(dst_addr, src_addr)] is None:
+                if res[(src_addr, dst_addr)] is None:
+                    continue
+                else:
+                    res[(src_addr, dst_addr)] = res[(dst_addr, src_addr)].copy()
+            else:
+                if res[(src_addr, dst_addr)] is None:
+                    res[(src_addr, dst_addr)] = res[(dst_addr, dst_addr)].copy()
+
+        checked = []
+        for (i, k) in res.keys():
+            #print("STAMPA FOR: ", (i, k))
+            if (i, k) in checked or (k, i) in checked:
+                continue
+
+            try:
+                if self.last_element[(i, k)] is not None:
+                    new_bytes = res[(i, k)]["bytes"] - self.last_element[(i, k)]["bytes"] if res[(i, k)]["bytes"] - self.last_element[(i, k)]["bytes"] > 0 else -1
+                    new_delta = res[(i, k)]["delta_t"] - self.last_element[(i, k)]["delta_t"] if res[(i, k)]["delta_t"] - self.last_element[(i, k)]["delta_t"] > 0 else -1
+
+                    res[(i, k)] = {
+                        "bytes":  new_bytes,
+                        "delta_t": new_delta,
+                        "tos": res[(i, k)]["tos"]
+                    }
+
+                    res[(k, i)] = {
+                        "bytes":  new_bytes,
+                        "delta_t": new_delta,
+                        "tos": res[(i, k)]["tos"]
+                    }
+                    checked.append((i, k))
+            except KeyError:
+                continue
+
+        self.last_element = res.copy()
+
         return res
     
     def close(self):
@@ -190,10 +251,16 @@ class NetflowInformationRetriever():
         print("Closing..")
         self.consumer.close()
 
+class NetflowUpdater(NetflowInformationRetriever):
+    def __init__(self) -> None:
+        super().__init__()
+        self.hub = threading.Thread(target=self._consumer_fun_and_elaboration)
+        self.hub.start()
 
 if __name__ == "__main__":
-    netflow = NetflowInformationRetriever()
+    netflow = NetflowUpdater()
     for i in range(10000000):
-        print(i, " " ,netflow.get_flow_information())
-        time.sleep(10)
+        netflow.bandwith_usage_per_link()
+        #print(i, " " ,netflow.bandwith_usage_per_link())
+        time.sleep(5)
     netflow.close()

@@ -1,7 +1,7 @@
 import queue
 
 def pid(Ki,Kp,Kd,desired_consumption_perc,actual_consumption_perc,q_cap,prev_error,dt):
-    traffic=actual_consumption_perc*q_cap
+    traffic=float(actual_consumption_perc)*float(q_cap)
     req_bw=traffic/desired_consumption_perc
 
     error=req_bw-q_cap
@@ -24,18 +24,27 @@ def get_optimized_bw(link_cap, queues, objectives, traffic_stats, errs, dt):
 
     new_q_bws = []
 
+
     for i in range(len(queues)):
-        q_cap,err=pid(ki,kp,kd,objectives[i],traffic_stats[i]/q_caps[i],q_caps[i],errs[i],dt)
-        new_q_bws.insert(i, q_cap)
+        #assert float(q_caps[i]) < 0
+        q_cap,err=pid(
+            ki,kp,kd,
+            objectives[i],
+            float(traffic_stats[i])/float(q_caps[i]),
+            float(q_caps[i]),
+            float(errs[i]),
+            float(dt)
+        )
+        new_q_bws.insert(i, int(q_cap))
         errs[i] = err
     
     for i in range(len(new_q_bws)):
         if new_q_bws[i] <= 0:
-            new_q_bws[i] = queues[i]
+            new_q_bws[i] = int(queues[i].max_rate)
 
-    cap_sum = sum(new_q_bws)
+    cap_sum = sum([int(x) for x in new_q_bws])
     if cap_sum > link_cap:
         for i in range(len(queues)):
-            new_q_bws[i] = new_q_bws[i]*link_cap/cap_sum
+            new_q_bws[i] = int(float(new_q_bws[i])*float(link_cap)/float(cap_sum))
 
     return new_q_bws, errs

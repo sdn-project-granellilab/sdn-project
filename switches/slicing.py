@@ -10,13 +10,21 @@ from ryu.lib.packet import udp
 from ryu.lib.packet import tcp
 from ryu.lib.packet import icmp
 from ryu.lib.packet import ipv4
-
+from ryu.controller import event
 from ryu.lib.ovs.bridge import OVSBridge
+import ryu.lib.hub as hub
 from utils import vsctlutil
-import json 
+from utils import kafkaconsumer
+from utils import pid
+import time
+import json
+from utils import queue
+
+from addict import Dict
 
 class TrafficSlicing(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
+    BW = 3*1000000
 
     def __init__(self, *args, **kwargs):
         super(TrafficSlicing, self).__init__(*args, **kwargs)
@@ -26,17 +34,94 @@ class TrafficSlicing(app_manager.RyuApp):
         #     1: {"00:00:00:00:00:01": 3, "00:00:00:00:00:02": 4, "00:00:00:00:00:03": 5, "00:00:00:00:00:04": 6},
         #     3: {"00:00:00:00:00:05": 3, "00:00:00:00:00:06": 4, "00:00:00:00:00:07": 5,"00:00:00:00:00:08": 6},
         # }
-        self.mac_to_port = {
-            1: {"10.0.0.1": 3, "10.0.0.2": 4, "10.0.0.3": 5, "10.0.0.4": 6},
-            3: {"10.0.0.5": 3, "10.0.0.6": 4, "10.0.0.7": 5, "10.0.0.8": 6},
+
+        # write ip as variables
+        h1 = "10.0.0.1"
+        h2 = "10.0.0.2"
+        h3 = "10.0.0.3"
+        h4 = "10.0.0.4"
+        s1 = "10.0.0.5"
+        s2 = "10.0.0.6"
+        s3 = "10.0.0.7"
+        s4 = "10.0.0.8"
+        self.ip_to_port = {
+            1: {h1: 3, h2: 4, h3: 5, h4: 6},
+            3: {s1: 3, s2: 4, s3: 5, s4: 6},
         }
+        self.slice_to_ip_pair = {
+            0: [
+                (h1, s1),
+                (h1, s2),
+                (h1, s3),
+                (h1, s4),
+                (h2, s1),
+                (h2, s2),
+                (h2, s3),
+                (h2, s4),
+            ],
+            1: [
+                (h3, s1),
+                (h3, s2),
+                (h3, s3),
+                (h3, s4),
+                (h4, s1),
+                (h4, s2),
+                (h4, s3),
+                (h4, s4),
+            ]
+        }
+
         self.slice_TCport = 9999
-        self.queue_mapping = dict()
+        self.queue_mapping = Dict()
+        self.nfgetter = kafkaconsumer.NetflowInformationRetriever()
 
         # outport = self.slice_ports[dpid][slicenumber]
         self.slice_ports = {1: {1: 1, 2: 2}, 3: {1: 1, 2: 2}}
         self.end_swtiches = [1, 3]
+        poll = hub.spawn(self.pollingNetflow)
 
+
+    
+    def pollingNetflow(self):
+        bw_usage = dict()
+        time.sleep(10)
+        while True:
+            time.sleep(10)
+            bw_usage_old = bw_usage
+            bw_usage = self.nfgetter.bandwith_usage_per_link()
+            queue_traffic=[0,0]
+            for (src,dst) in bw_usage.keys():
+                if (src,dst) in self.slice_to_ip_pair[0]:
+                    queue_traffic[0]+=(bw_usage[(src,dst)]["bytes"])
+                else:
+                    queue_traffic[1]+=(bw_usage[(src,dst)]["bytes"])
+                                
+
+            for dpid in self.queue_mapping.keys():
+                for port in self.queue_mapping[dpid].keys():
+                    queues = []
+                    for p in self.queue_mapping[dpid][port]["queues"].keys():
+                        queues.insert(int(p), queue.Queue(0, self.queue_mapping[dpid][port]["queues"][p]["bandwidth"]))
+                    print(self.queue_mapping[dpid][port]["link-capacity"])
+                    q_bw, errs = pid.get_optimized_bw(link_cap=self.queue_mapping[dpid][port]["link-capacity"], 
+                                        queues=queues, 
+                                        objectives=[self.queue_mapping[dpid][port]["queues"][obj]["objective_cons"] for obj in self.queue_mapping[dpid][port]["queues"].keys()], 
+                                        traffic_stats=queue_traffic, 
+                                        errs=[self.queue_mapping[dpid][port]["queues"][obj]["error"] for obj in self.queue_mapping[dpid][port]["queues"].keys()], 
+                                        dt=10)
+                    uuid = self.queue_mapping[dpid][port]["queues"][0]["uuid"]
+                    vsctlutil.set_queue(uuid, q_bw[0])
+                    uuid = self.queue_mapping[dpid][port]["queues"][1]["uuid"]
+                    vsctlutil.set_queue(uuid, q_bw[1])
+                    self.queue_mapping[dpid][port]["queues"][0]["error"] = errs[0]
+                    self.queue_mapping[dpid][port]["queues"][1]["error"] = errs[1]
+
+                    print("New queue bandwidths: ", q_bw)
+                    print("New errors: ", errs)
+
+
+
+            
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
         datapath = ev.msg.datapath
@@ -49,21 +134,21 @@ class TrafficSlicing(app_manager.RyuApp):
         bridge.br_name=f'r{dpid}'
         ports= bridge.get_port_name_list()
         
-        mega = 1000000
 
-        bw=3*mega if dpid==4 else 30*mega
         for port in ports:
-            result = vsctlutil.create_queue(port, bw, [int(bw*0.75),int(bw*0.25)])
+            q_bws = [int(self.BW*0.75),int(self.BW*0.25)]
+            uuids = vsctlutil.create_queue(port, self.BW, q_bws)
 
             nport = port.split("-")[0].strip("r")
-            #print(nport)
-            for i in range(1, len(result)):
-                dict1 = dict()
-                dict1[str(i)] = result[i]
-                dict2 = dict()
-                dict2[str(nport)] = dict1
-
-                self.queue_mapping[str(dpid)] = dict2
+            for i in range(1, len(uuids)):
+                self.queue_mapping[dpid][nport]["queues"][i-1]["uuid"] = uuids[i]
+                self.queue_mapping[dpid][nport]["queues"][i-1]["bandwidth"] = q_bws[i-1]
+                self.queue_mapping[dpid][nport]["queues"][i-1]["error"] = 0
+                self.queue_mapping[dpid][nport]["queues"][i-1]["objective_cons"] = 0.9 if i-1 == 0 else 0.6
+            
+            self.queue_mapping[dpid][nport]["link-capacity"] = self.BW
+            
+            # print(json.dumps(self.queue_mapping))
          
         match = parser.OFPMatch()
         actions = [
@@ -119,9 +204,9 @@ class TrafficSlicing(app_manager.RyuApp):
 
         dpid = datapath.id
 
-        if dpid in self.mac_to_port:
-            if dst in self.mac_to_port[dpid]:
-                out_port = self.mac_to_port[dpid][dst]
+        if dpid in self.ip_to_port:
+            if dst in self.ip_to_port[dpid]:
+                out_port = self.ip_to_port[dpid][dst]
                 actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
                 match = datapath.ofproto_parser.OFPMatch(ipv4_dst=dst)
                 self.add_flow(datapath, 1, match, actions)
