@@ -193,7 +193,7 @@ class NetflowInformationRetriever():
 
 if __name__ == "__main__":
     netflow = NetflowInformationRetriever()
-    for i in range(10):
+    for i in range(10000000):
         print(i, " " ,netflow.get_flow_information())
         time.sleep(10)
     netflow.close()

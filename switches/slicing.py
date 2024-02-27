@@ -110,8 +110,8 @@ class TrafficSlicing(app_manager.RyuApp):
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
             return
-        # dst = eth.dst
-        # src = eth.src
+        if eth.ethertype != ether_types.ETH_TYPE_IP:
+            return
 
         ip = pkt.get_protocol(ipv4.ipv4)
         dst = ip.dst
