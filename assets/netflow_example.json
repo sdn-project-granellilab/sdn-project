@@ -1,0 +1,38 @@
+{
+	"AgentID": "172.20.0.1",
+	"Header": {
+		"Version": 5,
+		"Count": 1,
+		"SysUpTimeMSecs": 11613,
+		"UNIXSecs": 1709043510,
+		"UNIXNSecs": 729220537,
+		"SeqNum": 0,
+		"EngType": 40,
+		"EngID": 40,
+		"SmpInt": 0
+	},
+	"Flows": [
+		{
+			"SrcAddr": "10.0.0.1",
+			"DstAddr": "10.0.0.6",
+			"NextHop": "0.0.0.0",
+			"Input": 3,
+			"Output": 65533,
+			"PktCount": 3,
+			"L3Octets": 222,
+			"StartTime": 7596,
+			"EndTime": 10644,
+			"SrcPort": 44538,
+			"DstPort": 5001,
+			"Padding1": 0,
+			"TCPFlags": 2,
+			"ProtType": 6,
+			"Tos": 16,
+			"SrcAsNum": 0,
+			"DstAsNum": 0,
+			"SrcMask": 0,
+			"DstMask": 0,
+			"Padding2": 0
+		}
+	]
+}

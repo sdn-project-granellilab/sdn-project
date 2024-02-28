@@ -1,0 +1,593 @@
+{
+    "OFPFlowStatsReply": {
+       "body": [
+          {
+             "OFPFlowStats": {
+                "byte_count": 183336,
+                "cookie": 0,
+                "duration_nsec": 71000000,
+                "duration_sec": 321,
+                "flags": 0,
+                "hard_timeout": 0,
+                "idle_timeout": 0,
+                "instructions": [
+                   {
+                      "OFPInstructionActions": {
+                         "actions": [
+                            {
+                               "OFPActionOutput": {
+                                  "len": 16,
+                                  "max_len": 65509,
+                                  "port": 3,
+                                  "type": 0
+                               }
+                            }
+                         ],
+                         "len": 24,
+                         "type": 4
+                      }
+                   }
+                ],
+                "length": 104,
+                "match": {
+                   "OFPMatch": {
+                      "length": 32,
+                      "oxm_fields": [
+                         {
+                            "OXMTlv": {
+                               "field": "in_port",
+                               "mask": null,
+                               "value": 1
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_src",
+                               "mask": null,
+                               "value": "00:00:00:00:00:05"
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_dst",
+                               "mask": null,
+                               "value": "00:00:00:00:00:01"
+                            }
+                         }
+                      ],
+                      "type": 1
+                   }
+                },
+                "packet_count": 2778,
+                "priority": 1,
+                "table_id": 0
+             }
+          },
+          {
+             "OFPFlowStats": {
+                "byte_count": 8786726,
+                "cookie": 0,
+                "duration_nsec": 69000000,
+                "duration_sec": 321,
+                "flags": 0,
+                "hard_timeout": 0,
+                "idle_timeout": 0,
+                "instructions": [
+                   {
+                      "OFPInstructionActions": {
+                         "actions": [
+                            {
+                               "OFPActionOutput": {
+                                  "len": 16,
+                                  "max_len": 65509,
+                                  "port": 1,
+                                  "type": 0
+                               }
+                            }
+                         ],
+                         "len": 24,
+                         "type": 4
+                      }
+                   }
+                ],
+                "length": 104,
+                "match": {
+                   "OFPMatch": {
+                      "length": 32,
+                      "oxm_fields": [
+                         {
+                            "OXMTlv": {
+                               "field": "in_port",
+                               "mask": null,
+                               "value": 3
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_src",
+                               "mask": null,
+                               "value": "00:00:00:00:00:01"
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_dst",
+                               "mask": null,
+                               "value": "00:00:00:00:00:05"
+                            }
+                         }
+                      ],
+                      "type": 1
+                   }
+                },
+                "packet_count": 3163,
+                "priority": 1,
+                "table_id": 0
+             }
+          },
+          {
+             "OFPFlowStats": {
+                "byte_count": 526720,
+                "cookie": 0,
+                "duration_nsec": 105000000,
+                "duration_sec": 118,
+                "flags": 0,
+                "hard_timeout": 0,
+                "idle_timeout": 0,
+                "instructions": [
+                   {
+                      "OFPInstructionActions": {
+                         "actions": [
+                            {
+                               "OFPActionOutput": {
+                                  "len": 16,
+                                  "max_len": 65509,
+                                  "port": 1,
+                                  "type": 0
+                               }
+                            }
+                         ],
+                         "len": 24,
+                         "type": 4
+                      }
+                   }
+                ],
+                "length": 104,
+                "match": {
+                   "OFPMatch": {
+                      "length": 32,
+                      "oxm_fields": [
+                         {
+                            "OXMTlv": {
+                               "field": "in_port",
+                               "mask": null,
+                               "value": 3
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_src",
+                               "mask": null,
+                               "value": "00:00:00:00:00:01"
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_dst",
+                               "mask": null,
+                               "value": "00:00:00:00:00:06"
+                            }
+                         }
+                      ],
+                      "type": 1
+                   }
+                },
+                "packet_count": 192,
+                "priority": 1,
+                "table_id": 0
+             }
+          },
+          {
+             "OFPFlowStats": {
+                "byte_count": 11224,
+                "cookie": 0,
+                "duration_nsec": 104000000,
+                "duration_sec": 118,
+                "flags": 0,
+                "hard_timeout": 0,
+                "idle_timeout": 0,
+                "instructions": [
+                   {
+                      "OFPInstructionActions": {
+                         "actions": [
+                            {
+                               "OFPActionOutput": {
+                                  "len": 16,
+                                  "max_len": 65509,
+                                  "port": 3,
+                                  "type": 0
+                               }
+                            }
+                         ],
+                         "len": 24,
+                         "type": 4
+                      }
+                   }
+                ],
+                "length": 104,
+                "match": {
+                   "OFPMatch": {
+                      "length": 32,
+                      "oxm_fields": [
+                         {
+                            "OXMTlv": {
+                               "field": "in_port",
+                               "mask": null,
+                               "value": 1
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_src",
+                               "mask": null,
+                               "value": "00:00:00:00:00:06"
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_dst",
+                               "mask": null,
+                               "value": "00:00:00:00:00:01"
+                            }
+                         }
+                      ],
+                      "type": 1
+                   }
+                },
+                "packet_count": 170,
+                "priority": 1,
+                "table_id": 0
+             }
+          },
+          {
+             "OFPFlowStats": {
+                "byte_count": 11182,
+                "cookie": 0,
+                "duration_nsec": 104000000,
+                "duration_sec": 408,
+                "flags": 0,
+                "hard_timeout": 0,
+                "idle_timeout": 0,
+                "instructions": [
+                   {
+                      "OFPInstructionActions": {
+                         "actions": [
+                            {
+                               "OFPActionOutput": {
+                                  "len": 16,
+                                  "max_len": 65535,
+                                  "port": 4294967293,
+                                  "type": 0
+                               }
+                            }
+                         ],
+                         "len": 24,
+                         "type": 4
+                      }
+                   }
+                ],
+                "length": 80,
+                "match": {
+                   "OFPMatch": {
+                      "length": 4,
+                      "oxm_fields": [],
+                      "type": 1
+                   }
+                },
+                "packet_count": 89,
+                "priority": 0,
+                "table_id": 0
+             }
+          }
+       ],
+       "flags": 0,
+       "type": 1
+    }
+ }
+ {
+    "OFPFlowStatsReply": {
+       "body": [
+          {
+             "OFPFlowStats": {
+                "byte_count": 183336,
+                "cookie": 0,
+                "duration_nsec": 71000000,
+                "duration_sec": 321,
+                "flags": 0,
+                "hard_timeout": 0,
+                "idle_timeout": 0,
+                "instructions": [
+                   {
+                      "OFPInstructionActions": {
+                         "actions": [
+                            {
+                               "OFPActionOutput": {
+                                  "len": 16,
+                                  "max_len": 65509,
+                                  "port": 3,
+                                  "type": 0
+                               }
+                            }
+                         ],
+                         "len": 24,
+                         "type": 4
+                      }
+                   }
+                ],
+                "length": 104,
+                "match": {
+                   "OFPMatch": {
+                      "length": 32,
+                      "oxm_fields": [
+                         {
+                            "OXMTlv": {
+                               "field": "in_port",
+                               "mask": null,
+                               "value": 1
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_src",
+                               "mask": null,
+                               "value": "00:00:00:00:00:05"
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_dst",
+                               "mask": null,
+                               "value": "00:00:00:00:00:01"
+                            }
+                         }
+                      ],
+                      "type": 1
+                   }
+                },
+                "packet_count": 2778,
+                "priority": 1,
+                "table_id": 0
+             }
+          },
+          {
+             "OFPFlowStats": {
+                "byte_count": 8786726,
+                "cookie": 0,
+                "duration_nsec": 69000000,
+                "duration_sec": 321,
+                "flags": 0,
+                "hard_timeout": 0,
+                "idle_timeout": 0,
+                "instructions": [
+                   {
+                      "OFPInstructionActions": {
+                         "actions": [
+                            {
+                               "OFPActionOutput": {
+                                  "len": 16,
+                                  "max_len": 65509,
+                                  "port": 1,
+                                  "type": 0
+                               }
+                            }
+                         ],
+                         "len": 24,
+                         "type": 4
+                      }
+                   }
+                ],
+                "length": 104,
+                "match": {
+                   "OFPMatch": {
+                      "length": 32,
+                      "oxm_fields": [
+                         {
+                            "OXMTlv": {
+                               "field": "in_port",
+                               "mask": null,
+                               "value": 3
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_src",
+                               "mask": null,
+                               "value": "00:00:00:00:00:01"
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_dst",
+                               "mask": null,
+                               "value": "00:00:00:00:00:05"
+                            }
+                         }
+                      ],
+                      "type": 1
+                   }
+                },
+                "packet_count": 3163,
+                "priority": 1,
+                "table_id": 0
+             }
+          },
+          {
+             "OFPFlowStats": {
+                "byte_count": 526720,
+                "cookie": 0,
+                "duration_nsec": 105000000,
+                "duration_sec": 118,
+                "flags": 0,
+                "hard_timeout": 0,
+                "idle_timeout": 0,
+                "instructions": [
+                   {
+                      "OFPInstructionActions": {
+                         "actions": [
+                            {
+                               "OFPActionOutput": {
+                                  "len": 16,
+                                  "max_len": 65509,
+                                  "port": 1,
+                                  "type": 0
+                               }
+                            }
+                         ],
+                         "len": 24,
+                         "type": 4
+                      }
+                   }
+                ],
+                "length": 104,
+                "match": {
+                   "OFPMatch": {
+                      "length": 32,
+                      "oxm_fields": [
+                         {
+                            "OXMTlv": {
+                               "field": "in_port",
+                               "mask": null,
+                               "value": 3
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_src",
+                               "mask": null,
+                               "value": "00:00:00:00:00:01"
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_dst",
+                               "mask": null,
+                               "value": "00:00:00:00:00:06"
+                            }
+                         }
+                      ],
+                      "type": 1
+                   }
+                },
+                "packet_count": 192,
+                "priority": 1,
+                "table_id": 0
+             }
+          },
+          {
+             "OFPFlowStats": {
+                "byte_count": 11224,
+                "cookie": 0,
+                "duration_nsec": 104000000,
+                "duration_sec": 118,
+                "flags": 0,
+                "hard_timeout": 0,
+                "idle_timeout": 0,
+                "instructions": [
+                   {
+                      "OFPInstructionActions": {
+                         "actions": [
+                            {
+                               "OFPActionOutput": {
+                                  "len": 16,
+                                  "max_len": 65509,
+                                  "port": 3,
+                                  "type": 0
+                               }
+                            }
+                         ],
+                         "len": 24,
+                         "type": 4
+                      }
+                   }
+                ],
+                "length": 104,
+                "match": {
+                   "OFPMatch": {
+                      "length": 32,
+                      "oxm_fields": [
+                         {
+                            "OXMTlv": {
+                               "field": "in_port",
+                               "mask": null,
+                               "value": 1
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_src",
+                               "mask": null,
+                               "value": "00:00:00:00:00:06"
+                            }
+                         },
+                         {
+                            "OXMTlv": {
+                               "field": "eth_dst",
+                               "mask": null,
+                               "value": "00:00:00:00:00:01"
+                            }
+                         }
+                      ],
+                      "type": 1
+                   }
+                },
+                "packet_count": 170,
+                "priority": 1,
+                "table_id": 0
+             }
+          },
+          {
+             "OFPFlowStats": {
+                "byte_count": 11182,
+                "cookie": 0,
+                "duration_nsec": 104000000,
+                "duration_sec": 408,
+                "flags": 0,
+                "hard_timeout": 0,
+                "idle_timeout": 0,
+                "instructions": [
+                   {
+                      "OFPInstructionActions": {
+                         "actions": [
+                            {
+                               "OFPActionOutput": {
+                                  "len": 16,
+                                  "max_len": 65535,
+                                  "port": 4294967293,
+                                  "type": 0
+                               }
+                            }
+                         ],
+                         "len": 24,
+                         "type": 4
+                      }
+                   }
+                ],
+                "length": 80,
+                "match": {
+                   "OFPMatch": {
+                      "length": 4,
+                      "oxm_fields": [],
+                      "type": 1
+                   }
+                },
+                "packet_count": 89,
+                "priority": 0,
+                "table_id": 0
+             }
+          }
+       ],
+       "flags": 0,
+       "type": 1
+    }
+ }
+ 
