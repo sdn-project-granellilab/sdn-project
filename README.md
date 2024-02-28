@@ -12,6 +12,10 @@ During the project we found out that every router exports Netflow packets and we
 use them as a datasource input for a PID controller, that allow us to split 
 the SDN in different Queue, with different bandwidth and, for that reason, we found
 out the best way to split the network every time instance.
+The focus of the project after that is the representation of data and the data analytics
+in ordert to obtain flow information and a sort of a "data-drive" approach.
+The slicing algorithm is a **proof-of-concept** of the PID algorithm, that works moodulating
+the frequency of bandwith and then apply that to the queue of Openswitch.
 
 ## Context and Project
 
@@ -109,6 +113,24 @@ Manca grafana screenshot, Kafka e Postgres.
 
 ## How to start with this project
 
+We added port-forwarding for some services, the other ports are forwarded by the
+**VC-CODE Live Share Extension**. If you could not access some ports, add forwarding
+via this methods or others.
+
+In ordert to port forward via Vagrant file, the ports that should be public are:
+
+- `3000`: for Grafana
+- `8085`: Postgres UI interface
+- `8080`: Kafka UI (optional)
+- `9090`: Prometheus (optional)
+
+In some cases the database failed to be created, we should manually create. In order to 
+do that:
+1. Open on the browser the link `http://localhost:8085`
+2. login with `postgres:example`, and select the type of database property as `PostgreSQL`.
+3. In that page, click on create database.
+4. Write `Netflow` on the name of the database and click `Save`.
+5. We can close this interface.
 Could be useful to create the database table. (`CREATE DATABASE IF NOT EXISTS Netflow;`)
 
 We need to set this in order for the `Kafka` counsumer to work:
@@ -121,37 +143,28 @@ After that, we start the `docker-compose` services.
 2. Start docker services
 
 ```sh
-docker-compose up -f /docker-compose/docker-compose.yml
+docker-compose up -f docker-compose/docker-compose.yml
 ```
-We can start the Ryu Controller in ordert to have a demonstration of the netfow 
-packets creation and management.
-3. Start `ryu-controller` 
-
+3. Start `ryu-controller`, in ordert to have a demonstration of the netfow 
+packets creation and management
 ```sh
-ryu-manager switches/simple-switch.py
+ryu-manager switches/slicing.py
 ```
 4. Start mininet
-
 ```sh
-sudo mn -c && sudo python3 topo/topolino.py
+sudo mn -c && sudo -E python3 topo/topolino.py
 ```
 5. Set Netflow Data exporters on OpenFlow's routers
-
 ```sh
 bash ./qos/nf-setup.sh
 ```
-6. In order to generate some traffic on the network, we could lauch some `iperf`
-
-7. Visualize the flow on Grafana `localhost:3000`
-
-After that, we can elaborate on the slicing, starting over with `sudo mn -c` and 
-repeat the phase until number 2 (included). Then:
-
-3. Start `ryu-controller`:
+6. Run the KafkaConsumer:
 ```bash
-ryu-manager switches/slicing.py
+python3 switches/utils/kafkaconsumer.py
 ```
-Ad continue with the operation described before that.
+7. In order to generate some traffic on the network, we could lauch some `iperf`
+
+8. Visualize the flow on Grafana `localhost:3000`
 
 ## Conclusion
 

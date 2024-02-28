@@ -207,10 +207,12 @@ class TrafficSlicing(app_manager.RyuApp):
         if dpid in self.ip_to_port:
             if dst in self.ip_to_port[dpid]:
                 out_port = self.ip_to_port[dpid][dst]
-                actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+                actions = [datapath.ofproto_parser.OFPActionSetQueue(0 if (src, dst) in self.slice_to_ip_pair[0] else 1),datapath.ofproto_parser.OFPActionOutput(out_port)]
                 match = datapath.ofproto_parser.OFPMatch(ipv4_dst=dst)
                 self.add_flow(datapath, 1, match, actions)
                 self._send_package(msg, datapath, in_port, actions)
+            
+            
 
             else:
                 slice_number = 1
@@ -220,7 +222,7 @@ class TrafficSlicing(app_manager.RyuApp):
                     ipv4_dst=dst,
                     eth_type=ether_types.ETH_TYPE_IP,
                 )
-                actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+                actions = [datapath.ofproto_parser.OFPActionSetQueue(0 if (src, dst) in self.slice_to_ip_pair[0] else 1),datapath.ofproto_parser.OFPActionOutput(out_port)]
                 self.add_flow(datapath, 2, match, actions)
                 self._send_package(msg, datapath, in_port, actions)
 
