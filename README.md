@@ -133,6 +133,11 @@ do that:
 5. We can close this interface.
 Could be useful to create the database table. (`CREATE DATABASE IF NOT EXISTS Netflow;`)
 
+If missing python dependencies run:
+```sh
+sudo pip install -r requirements.txt
+```
+
 We need to set this in order for the `Kafka` counsumer to work:
 1. Config /etc/hosts
 
@@ -148,7 +153,7 @@ docker-compose up -f docker-compose/docker-compose.yml
 3. Start `ryu-controller`, in ordert to have a demonstration of the netfow 
 packets creation and management
 ```sh
-ryu-manager switches/slicing.py
+sudo ryu-manager switches/slicing.py
 ```
 4. Start mininet
 ```sh
